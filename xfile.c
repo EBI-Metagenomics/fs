@@ -14,7 +14,7 @@
 #ifdef __APPLE__
 #define _DARWIN_C_SOURCE
 #include <fcntl.h>
-#include <sys/syslimits.h>
+#include <sys/param.h>
 #endif
 
 #define BUFFSIZE (8 * 1024)
@@ -93,12 +93,10 @@ int xfile_rmdir(char const *dirpath)
     return rmdir(dirpath) < 0 ? XFILE_ERMDIR : XFILE_OK;
 }
 
-static int filepath_from_file_pointer(FILE *fp, char *filepath);
-
 int xfile_refopen(FILE *fp, char const *mode, FILE **out)
 {
-    char filepath[PATH_MAX] = {0};
-    int rc = filepath_from_file_pointer(fp, filepath);
+    char filepath[FILENAME_MAX] = {0};
+    int rc = xfile_getpath(fp, sizeof filepath, filepath);
     if (rc) return rc;
     return (*out = fopen(filepath, mode)) ? XFILE_OK : XFILE_EFOPEN;
 }
@@ -106,6 +104,30 @@ int xfile_refopen(FILE *fp, char const *mode, FILE **out)
 int xfile_fileno(FILE *fp, int *fd)
 {
     return (*fd = fileno(fp)) < 0 ? XFILE_EFILENO : XFILE_OK;
+}
+
+int xfile_getpath(FILE *fp, unsigned size, char *filepath)
+{
+    int fd = 0;
+    int rc = xfile_fileno(fp, &fd);
+    if (rc) return rc;
+
+#ifdef __APPLE__
+    (void)size;
+    char pathbuf[MAXPATHLEN] = {0};
+    if (fcntl(fd, F_GETPATH, pathbuf) < 0) return XFILE_EFCNTL;
+    if (strlen(pathbuf) >= size) return XFILE_ETRUNCPATH;
+    strcpy(filepath, pathbuf);
+#else
+    char pathbuf[FILENAME_MAX] = {0};
+    sprintf(pathbuf, "/proc/self/fd/%d", fd);
+    ssize_t n = readlink(pathbuf, filepath, size);
+    if (n < 0) return XFILE_EREADLINK;
+    if (n >= size) return XFILE_ETRUNCPATH;
+    filepath[n] = '\0';
+#endif
+
+    return XFILE_OK;
 }
 
 bool xfile_exists(char const *filepath) { return access(filepath, F_OK) == 0; }
@@ -149,19 +171,4 @@ char const *xfile_strerror(int rc)
 {
     if (rc < 0 || rc >= (int)ARRAY_SIZE(error_strings)) return "unknown error";
     return error_strings[rc];
-}
-
-static int filepath_from_file_pointer(FILE *fp, char *filepath)
-{
-    int fd = 0;
-    int rc = xfile_fileno(fp, &fd);
-    if (rc) return rc;
-
-#ifdef __APPLE__
-    if (fcntl(fd, F_GETPATH, filepath) < 0) return XFILE_EFCNTL;
-#else
-    sprintf(filepath, "/proc/self/fd/%d", fd);
-#endif
-
-    return XFILE_OK;
 }

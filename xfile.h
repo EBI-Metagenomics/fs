@@ -18,11 +18,13 @@
     X(EFTELL, "ftell failure")                                                 \
     X(EFWRITE, "fwrite failure")                                               \
     X(ENOMEM, "not enough memory")                                             \
+    X(EREADLINK, "readlink failure")                                           \
     X(ERMDIR, "rmdir failure")                                                 \
     X(ESTAT, "stat failure")                                                   \
+    X(ETRUNCPATH, "truncated path")                                            \
     X(EUNLINK, "unlink failure")
 
-enum xfile_rc
+enum xfile_rc : int
 {
 #define X(A, _) XFILE_##A,
     XFILE_MAP(X)
@@ -42,6 +44,7 @@ int xfile_rmdir(char const *dirpath);
 
 int xfile_refopen(FILE *fp, char const *mode, FILE **out);
 int xfile_fileno(FILE *fp, int *fd);
+int xfile_getpath(FILE *fp, unsigned size, char *filepath);
 
 bool xfile_exists(char const *filepath);
 int xfile_touch(char const *filepath);

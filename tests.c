@@ -27,8 +27,13 @@ int main(void)
     ASSERT(size == 1069);
 
     FILE *fp = fopen("LICENSE", "rb");
+    char filepath[1024] = {0};
     ASSERT(!xfile_psize(fp, &size));
     ASSERT(size == 1069);
+    ASSERT(!xfile_getpath(fp, sizeof filepath, filepath));
+    ASSERT(strlen(filepath) >= strlen("LICENSE"));
+    char const *base = &filepath[strlen(filepath) - strlen("LICENSE")];
+    ASSERT(!strcmp(base, "LICENSE"));
     fclose(fp);
 
     int fd = 0;

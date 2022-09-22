@@ -1,6 +1,6 @@
 .POSIX:
 
-XFILE_VERSION := 1.0.0
+XFILE_VERSION := 1.1.0
 
 CC ?= gcc
 CFLAGS := $(CFLAGS) -Wall -Wextra
