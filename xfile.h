@@ -24,7 +24,7 @@
     X(ETRUNCPATH, "truncated path")                                            \
     X(EUNLINK, "unlink failure")
 
-enum xfile_rc : int
+enum xfile_rc
 {
 #define X(A, _) XFILE_##A,
     XFILE_MAP(X)
