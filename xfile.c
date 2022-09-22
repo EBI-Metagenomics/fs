@@ -1,3 +1,11 @@
+#ifdef _POSIX_C_SOURCE
+#undef _POSIX_C_SOURCE
+#endif
+
+#ifdef _FILE_OFFSET_BITS
+#undef _FILE_OFFSET_BITS
+#endif
+
 #define _POSIX_C_SOURCE 200112L
 #define _FILE_OFFSET_BITS 64
 
@@ -12,6 +20,9 @@
 #include <unistd.h>
 
 #ifdef __APPLE__
+#ifdef _DARWIN_C_SOURCE
+#undef _DARWIN_C_SOURCE
+#endif
 #define _DARWIN_C_SOURCE
 #include <fcntl.h>
 #include <sys/param.h>
