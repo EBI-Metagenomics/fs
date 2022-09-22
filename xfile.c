@@ -93,6 +93,20 @@ int xfile_rmdir(char const *dirpath)
     return rmdir(dirpath) < 0 ? XFILE_ERMDIR : XFILE_OK;
 }
 
+static int concat_path_file(unsigned size, char *dst, const char *path,
+                            const char *filename);
+
+int xfile_mkstemp(unsigned size, char *filepath)
+{
+    filepath[0] = '\0';
+    static char const template[] = "tmp.XXXXXXXXXX";
+    char const *tmpdir = getenv("TMPDIR");
+    if (!tmpdir || tmpdir[0] == '\0') tmpdir = "/tmp";
+    int rc = concat_path_file(size, filepath, tmpdir, template);
+    if (rc) return rc;
+    return mkstemp(filepath) < 0 ? XFILE_EMKSTEMP : XFILE_OK;
+}
+
 int xfile_refopen(FILE *fp, char const *mode, FILE **out)
 {
     char filepath[FILENAME_MAX] = {0};
@@ -171,4 +185,31 @@ char const *xfile_strerror(int rc)
 {
     if (rc < 0 || rc >= (int)ARRAY_SIZE(error_strings)) return "unknown error";
     return error_strings[rc];
+}
+
+// ACK: BusyBox
+static char *last_char_is(const char *s, int c)
+{
+    if (!s[0]) return NULL;
+    while (s[1])
+        s++;
+    return (*s == (char)c) ? (char *)s : NULL;
+}
+
+// ACK: BusyBox
+static int concat_path_file(unsigned size, char *dst, const char *path,
+                            const char *filename)
+{
+    if (!path) path = "";
+    char *lc = last_char_is(path, '/');
+    while (*filename == '/')
+        filename++;
+
+    char const *sep = lc == NULL ? "/" : "";
+    if (strlen(path) + strlen(sep) + strlen(filename) >= size)
+        return XFILE_ETRUNCPATH;
+
+    dst[0] = '\0';
+    strcat(strcat(strcat(dst, path), sep), filename);
+    return XFILE_OK;
 }

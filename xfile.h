@@ -17,6 +17,7 @@
     X(EFSYNC, "fsync failure")                                                 \
     X(EFTELL, "ftell failure")                                                 \
     X(EFWRITE, "fwrite failure")                                               \
+    X(EMKSTEMP, "mkstemp failure")                                            \
     X(ENOMEM, "not enough memory")                                             \
     X(EREADLINK, "readlink failure")                                           \
     X(ERMDIR, "rmdir failure")                                                 \
@@ -41,6 +42,7 @@ int xfile_seek(FILE *restrict fp, int64_t offset, int whence);
 int xfile_copy(FILE *restrict dst, FILE *restrict src);
 int xfile_unlink(char const *filepath);
 int xfile_rmdir(char const *dirpath);
+int xfile_mkstemp(unsigned size, char *filepath);
 
 int xfile_refopen(FILE *fp, char const *mode, FILE **out);
 int xfile_fileno(FILE *fp, int *fd);

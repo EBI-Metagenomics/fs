@@ -59,5 +59,12 @@ int main(void)
     ASSERT(!strcmp(xfile_strerror(127), "unknown error"));
     ASSERT(!strcmp(xfile_strerror(XFILE_ENOMEM), "not enough memory"));
 
+    ASSERT(!xfile_mkstemp(sizeof filepath, filepath));
+    ASSERT(xfile_exists(filepath));
+    ASSERT(!xfile_unlink(filepath));
+
+    char small[6] = {0};
+    ASSERT(xfile_mkstemp(sizeof small, small) == XFILE_ETRUNCPATH);
+
     return 0;
 }
