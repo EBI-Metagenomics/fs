@@ -4,10 +4,9 @@
 #include "xfile.h"
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-
-static_assert(sizeof(off_t) == 8, "");
 
 #include <sys/stat.h>
 #include <unistd.h>

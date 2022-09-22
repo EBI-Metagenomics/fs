@@ -3,7 +3,7 @@
 XFILE_VERSION := 1.0.0
 
 CC ?= gcc
-CFLAGS := $(CFLAGS) -std=c11 -Wall -Wextra
+CFLAGS := $(CFLAGS) -Wall -Wextra
 
 SRC := xfile.c
 OBJ := $(SRC:.c=.o)
