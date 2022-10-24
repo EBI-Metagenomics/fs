@@ -15,7 +15,6 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -26,6 +25,13 @@
 #define _DARWIN_C_SOURCE 1
 #include <fcntl.h>
 #include <sys/param.h>
+#endif
+
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#include <copyfile.h>
+#else
+#include <fcntl.h>
+#include <sys/sendfile.h>
 #endif
 
 #define BUFFSIZE (8 * 1024)
@@ -70,6 +76,62 @@ int fs_size_fd(int fd, long *size)
     return FS_OK;
 }
 
+int fs_getperm(char const *path, int who, int perm, bool *value)
+{
+    struct stat st;
+    if (stat(path, &st)) return FS_ESTAT;
+
+    if (who == FS_OWNER && perm == FS_READ)
+        *value = st.st_mode & S_IRUSR;
+    else if (who == FS_OWNER && perm == FS_WRITE)
+        *value = st.st_mode & S_IWUSR;
+    else if (who == FS_OWNER && perm == FS_EXEC)
+        *value = st.st_mode & S_IXUSR;
+    else if (who == FS_GROUP && perm == FS_READ)
+        *value = st.st_mode & S_IRGRP;
+    else if (who == FS_GROUP && perm == FS_WRITE)
+        *value = st.st_mode & S_IWGRP;
+    else if (who == FS_GROUP && perm == FS_EXEC)
+        *value = st.st_mode & S_IXGRP;
+    else if (who == FS_ALL && perm == FS_READ)
+        *value = st.st_mode & S_IROTH;
+    else if (who == FS_ALL && perm == FS_WRITE)
+        *value = st.st_mode & S_IWOTH;
+    else if (who == FS_ALL && perm == FS_EXEC)
+        *value = st.st_mode & S_IXOTH;
+
+    return FS_EINVAL;
+}
+
+int fs_setperm(char const *path, int who, int perm, bool value)
+{
+    struct stat st;
+    if (stat(path, &st)) return FS_ESTAT;
+
+    if (who == FS_OWNER && perm == FS_READ)
+        st.st_mode = (st.st_mode & ~S_IRUSR) | (value ? S_IRUSR : 0);
+    else if (who == FS_OWNER && perm == FS_WRITE)
+        st.st_mode = (st.st_mode & ~S_IWUSR) | (value ? S_IWUSR : 0);
+    else if (who == FS_OWNER && perm == FS_EXEC)
+        st.st_mode = (st.st_mode & ~S_IXUSR) | (value ? S_IXUSR : 0);
+    else if (who == FS_GROUP && perm == FS_READ)
+        st.st_mode = (st.st_mode & ~S_IRGRP) | (value ? S_IRGRP : 0);
+    else if (who == FS_GROUP && perm == FS_WRITE)
+        st.st_mode = (st.st_mode & ~S_IWGRP) | (value ? S_IWGRP : 0);
+    else if (who == FS_GROUP && perm == FS_EXEC)
+        st.st_mode = (st.st_mode & ~S_IXGRP) | (value ? S_IXGRP : 0);
+    else if (who == FS_ALL && perm == FS_READ)
+        st.st_mode = (st.st_mode & ~S_IROTH) | (value ? S_IROTH : 0);
+    else if (who == FS_ALL && perm == FS_WRITE)
+        st.st_mode = (st.st_mode & ~S_IWOTH) | (value ? S_IWOTH : 0);
+    else if (who == FS_ALL && perm == FS_EXEC)
+        st.st_mode = (st.st_mode & ~S_IXOTH) | (value ? S_IXOTH : 0);
+    else
+        return FS_EINVAL;
+
+    return chmod(path, st.st_mode) ? FS_ECHMOD : FS_OK;
+}
+
 int fs_tell(FILE *restrict fp, long *offset)
 {
     return (*offset = ftello(fp)) < 0 ? FS_EFTELL : FS_OK;
@@ -80,7 +142,53 @@ int fs_seek(FILE *restrict fp, long offset, int whence)
     return fseeko(fp, (off_t)offset, whence) < 0 ? FS_EFSEEK : FS_OK;
 }
 
-int fs_copy(FILE *restrict dst, FILE *restrict src)
+int fs_copy(char const *dst, char const *src)
+{
+    int input = 0;
+    int output = 0;
+
+    if ((input = open(src, O_RDONLY)) == -1)
+    {
+        return FS_EOPEN;
+    }
+    if ((output = creat(dst, 0660)) == -1)
+    {
+        close(input);
+        return FS_ECREAT;
+    }
+
+    // Here we use kernel-space copying for performance reasons
+#if defined(__APPLE__) || defined(__FreeBSD__)
+    // fcopyfile works on FreeBSD and OS X 10.5+
+    if (fcopyfile(input, output, 0, COPYFILE_ALL))
+    {
+        close(input);
+        close(output);
+        return FS_EFCOPYFILE;
+    }
+#else
+    // sendfile will work with non-socket output (i.e. regular file) on
+    // Linux 2.6.33+
+    off_t bytesCopied = 0;
+    struct stat fileinfo = {0};
+    fstat(input, &fileinfo);
+    if (sendfile(output, input, &bytesCopied, fileinfo.st_size))
+    {
+        close(input);
+        close(output);
+        return FS_SENDFILE;
+    }
+#endif
+
+    if (close(input))
+    {
+        close(output);
+        return FS_ECLOSE;
+    }
+    return close(output) ? FS_ECLOSE : FS_OK;
+}
+
+int fs_copy_fp(FILE *restrict dst, FILE *restrict src)
 {
     static _Thread_local char buffer[BUFFSIZE];
     size_t n = 0;
@@ -132,7 +240,7 @@ int fs_move(char const *restrict dst, char const *restrict src)
         return FS_EFOPEN;
     }
 
-    int rc = fs_copy(fdst, fsrc);
+    int rc = fs_copy_fp(fdst, fsrc);
     if (!fclose(fdst) && fclose(fsrc)) fs_unlink(src);
     return rc;
 }
@@ -284,16 +392,19 @@ static void _fs_readlines_cleanup(long cnt, char *lines[])
     free(lines);
 }
 
-int fs_readlines(FILE *in, long *cnt, char **lines[])
+int fs_readlines(char const *filepath, long *cnt, char **lines[])
 {
     static _Thread_local char line[LINESIZE] = {0};
+
+    FILE *fp = fopen(filepath, "r");
+    if (!fp) return FS_EFOPEN;
 
     *cnt = 0;
     *lines = NULL;
 
-    while (fgets(line, sizeof(line), in))
+    while (fgets(line, sizeof(line), fp))
     {
-        if (ferror(in)) return FS_EFGETS;
+        if (ferror(fp)) return FS_EFGETS;
 
         char **ptr = NULL;
         if (*cnt == 0)
@@ -320,7 +431,90 @@ int fs_readlines(FILE *in, long *cnt, char **lines[])
         (*lines)[*cnt] = str;
         *cnt += 1;
     }
-    return ferror(in) ? FS_EFGETS : FS_OK;
+    return ferror(fp) ? FS_EFGETS : FS_OK;
+}
+
+int fs_writelines(char const *filepath, long cnt, char *lines[])
+{
+    FILE *fp = fopen(filepath, "w");
+    if (!fp) return FS_EFOPEN;
+
+    if (cnt <= 0) return fclose(fp) ? FS_EFCLOSE : FS_OK;
+
+    for (long i = 0; i < cnt; ++i)
+    {
+        if (fputs(lines[i], fp) < 1)
+        {
+            fclose(fp);
+            return FS_EFWRITE;
+        }
+        size_t n = strlen(lines[i]);
+        if (n == 0 || lines[i][n - 1] != '\n')
+        {
+            if (fputc('\n', fp) != '\n')
+            {
+                fclose(fp);
+                return FS_EFPUTC;
+            }
+        }
+    }
+
+    return fclose(fp) ? FS_EFCLOSE : FS_OK;
+}
+
+static int compare(const void *a, const void *b)
+{
+    return strcmp(*((char const **)a), *((char const **)b));
+}
+
+int fs_sort(char const *filepath)
+{
+    long cnt = 0;
+    char **lines = NULL;
+    int rc = FS_OK;
+
+    if ((rc = fs_readlines(filepath, &cnt, &lines))) return rc;
+    qsort(lines, cnt, sizeof(*lines), &compare);
+    rc = fs_writelines(filepath, cnt, lines);
+
+    _fs_readlines_cleanup(cnt, lines);
+    return rc;
+}
+
+static int _fs_fletcher16(FILE *fp, uint8_t *buf, size_t bufsize, long *chk)
+{
+    size_t n = 0;
+    uint16_t sum1 = 0;
+    uint16_t sum2 = 0;
+    while ((n = fread(buf, 1, bufsize, fp)) > 0)
+    {
+        if (n < bufsize && ferror(fp)) return FS_EFREAD;
+        for (int i = 0; i < (int)n; ++i)
+        {
+            sum1 = (sum1 + buf[i]) % 255;
+            sum2 = (sum2 + sum1) % 255;
+        }
+    }
+    if (ferror(fp)) return FS_EFREAD;
+
+    *chk = (sum2 << 8) | sum1;
+    return FS_OK;
+}
+
+int fs_cksum(char const *filepath, int algo, long *chk)
+{
+    static _Thread_local uint8_t buffer[BUFFSIZE];
+    FILE *fp = fopen(filepath, "rb");
+    if (!fp) return FS_EFOPEN;
+
+    int rc = 0;
+    if (algo == FS_FLETCHER16)
+        rc = _fs_fletcher16(fp, buffer, sizeof(buffer), chk);
+    else
+        rc = FS_EINVAL;
+
+    fclose(fp);
+    return rc;
 }
 
 // ACK: BusyBox

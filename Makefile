@@ -1,9 +1,9 @@
 .POSIX:
 
-FS_VERSION := 1.3.0
+FS_VERSION := 2.0.0
 
-CC ?= gcc
-CFLAGS := $(CFLAGS) -Wall -Wextra
+CC := clang
+CFLAGS := $(CFLAGS) -std=c11 -Wall -Wextra
 
 SRC := fs.c
 OBJ := $(SRC:.c=.o)
@@ -18,7 +18,7 @@ tests.o: tests.c $(HDR)
 	$(CC) $(CFLAGS) -c $<
 
 tests: tests.o $(OBJ)
-	$(CC) -o $@ $^
+	$(CC) $(CFLAGS) $^ -o $@
 
 test check: tests
 	./tests
@@ -33,6 +33,6 @@ distclean:
 	rm -f fs-$(FS_VERSION).tar.gz
 
 clean: distclean
-	rm -f tests *.o
+	rm -f tests *.o output.txt
 
 .PHONY: all check test dist distclean clean

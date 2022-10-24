@@ -20,6 +20,8 @@ inline static void print_ctx(char const *func, char const *file, int line)
         }                                                                      \
     } while (0)
 
+static void test_cksum(void);
+
 int main(void)
 {
     long size = 0;
@@ -66,5 +68,26 @@ int main(void)
     char small[6] = {0};
     ASSERT(fs_mkstemp(sizeof small, small) == FS_ETRUNCPATH);
 
+    test_cksum();
+
     return 0;
+}
+
+static void test_cksum(void)
+{
+    static char *files[] = {
+        "assets/a.txt", "assets/b.txt", "assets/c.txt",       "assets/d.txt",
+        "assets/e.txt", "assets/f.txt", "assets/unsorted.txt"};
+    static long chsums[] = {0, 2570, 27707, 27707, 19317, 19317, 46689};
+
+    for (int i = 0; i < 7; ++i)
+    {
+        long chk = 0;
+        if (fs_exists("output.txt")) fs_unlink("output.txt");
+        ASSERT(!fs_copy("output.txt", files[i]));
+        ASSERT(!fs_setperm("output.txt", FS_OWNER, FS_WRITE, true));
+        ASSERT(!fs_sort("output.txt"));
+        ASSERT(!fs_cksum("output.txt", FS_FLETCHER16, &chk));
+        ASSERT(chsums[i] == chk);
+    }
 }
