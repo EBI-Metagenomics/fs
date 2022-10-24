@@ -6,4 +6,4 @@
 
 ## License
 
-This project is licensed under the [MIT License](https://raw.githubusercontent.com/horta/xfile/main/LICENSE).
+This project is licensed under the [MIT License](https://raw.githubusercontent.com/horta/fs/main/LICENSE).

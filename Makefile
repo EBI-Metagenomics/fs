@@ -1,38 +1,36 @@
 .POSIX:
 
-XFILE_VERSION := 1.3.0
+FS_VERSION := 1.3.0
 
 CC ?= gcc
 CFLAGS := $(CFLAGS) -Wall -Wextra
 
-SRC := xfile.c
+SRC := fs.c
 OBJ := $(SRC:.c=.o)
-HDR := xfile.h
+HDR := fs.h
 
 all: tests
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
 
-tests.o: tests.c
+tests.o: tests.c $(HDR)
 	$(CC) $(CFLAGS) -c $<
 
 tests: tests.o $(OBJ)
 	$(CC) -o $@ $^
 
-check: tests
+test check: tests
 	./tests
 
-test: check
-
 dist: clean
-	mkdir -p xfile-$(XFILE_VERSION)
-	cp -R README.md LICENSE $(SRC) $(HDR) xfile-$(XFILE_VERSION)
-	tar -cf - xfile-$(XFILE_VERSION) | gzip > xfile-$(XFILE_VERSION).tar.gz
-	rm -rf xfile-$(XFILE_VERSION)
+	mkdir -p fs-$(FS_VERSION)
+	cp -R README.md LICENSE $(SRC) $(HDR) fs-$(FS_VERSION)
+	tar -cf - fs-$(FS_VERSION) | gzip > fs-$(FS_VERSION).tar.gz
+	rm -rf fs-$(FS_VERSION)
 
 distclean:
-	rm -f xfile-$(XFILE_VERSION).tar.gz
+	rm -f fs-$(FS_VERSION).tar.gz
 
 clean: distclean
 	rm -f tests *.o

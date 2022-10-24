@@ -1,4 +1,4 @@
-#include "xfile.h"
+#include "fs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,49 +22,49 @@ inline static void print_ctx(char const *func, char const *file, int line)
 
 int main(void)
 {
-    int64_t size = 0;
-    ASSERT(!xfile_size("LICENSE", &size));
+    long size = 0;
+    ASSERT(!fs_size("LICENSE", &size));
     ASSERT(size == 1069);
 
     FILE *fp = fopen("LICENSE", "rb");
     char filepath[1024] = {0};
-    ASSERT(!xfile_psize(fp, &size));
+    ASSERT(!fs_size_fp(fp, &size));
     ASSERT(size == 1069);
-    ASSERT(!xfile_getpath(fp, sizeof filepath, filepath));
+    ASSERT(!fs_getpath(fp, sizeof filepath, filepath));
     ASSERT(strlen(filepath) >= strlen("LICENSE"));
     char const *base = &filepath[strlen(filepath) - strlen("LICENSE")];
     ASSERT(!strcmp(base, "LICENSE"));
     fclose(fp);
 
     int fd = 0;
-    ASSERT(!xfile_fileno(stdin, &fd));
+    ASSERT(!fs_fileno(stdin, &fd));
     ASSERT(fd == STDIN_FILENO);
 
-    ASSERT(!xfile_fileno(stdin, &fd));
+    ASSERT(!fs_fileno(stdin, &fd));
     ASSERT(fd == STDIN_FILENO);
 
-    ASSERT(!xfile_fileno(stdout, &fd));
+    ASSERT(!fs_fileno(stdout, &fd));
     ASSERT(fd == STDOUT_FILENO);
 
-    ASSERT(!xfile_fileno(stderr, &fd));
+    ASSERT(!fs_fileno(stderr, &fd));
     ASSERT(fd == STDERR_FILENO);
 
     unsigned char *data = NULL;
-    ASSERT(!xfile_readall("LICENSE", &size, &data));
+    ASSERT(!fs_readall("LICENSE", &size, &data));
 
-    ASSERT(!xfile_touch("touch.txt"));
-    ASSERT(!xfile_unlink("touch.txt"));
+    ASSERT(!fs_touch("touch.txt"));
+    ASSERT(!fs_unlink("touch.txt"));
 
-    ASSERT(!strcmp(xfile_strerror(-1), "unknown error"));
-    ASSERT(!strcmp(xfile_strerror(127), "unknown error"));
-    ASSERT(!strcmp(xfile_strerror(XFILE_ENOMEM), "not enough memory"));
+    ASSERT(!strcmp(fs_strerror(-1), "unknown error"));
+    ASSERT(!strcmp(fs_strerror(127), "unknown error"));
+    ASSERT(!strcmp(fs_strerror(FS_ENOMEM), "not enough memory"));
 
-    ASSERT(!xfile_mkstemp(sizeof filepath, filepath));
-    ASSERT(xfile_exists(filepath));
-    ASSERT(!xfile_unlink(filepath));
+    ASSERT(!fs_mkstemp(sizeof filepath, filepath));
+    ASSERT(fs_exists(filepath));
+    ASSERT(!fs_unlink(filepath));
 
     char small[6] = {0};
-    ASSERT(xfile_mkstemp(sizeof small, small) == XFILE_ETRUNCPATH);
+    ASSERT(fs_mkstemp(sizeof small, small) == FS_ETRUNCPATH);
 
     return 0;
 }

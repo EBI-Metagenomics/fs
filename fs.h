@@ -1,14 +1,15 @@
-#ifndef XFILE_H
-#define XFILE_H
+#ifndef FS_H
+#define FS_H
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#define XFILE_MAP(X)                                                           \
+#define FS_MAP(X)                                                              \
     X(OK, "not an error")                                                      \
     X(EFCLOSE, "fclose failed")                                                \
     X(EFCNTL, "fcntl failed")                                                  \
+    X(EFGETS, "fgets failed")                                                  \
     X(EFILENO, "fileno failed")                                                \
     X(EFOPEN, "fopen failed")                                                  \
     X(EFREAD, "fread failed")                                                  \
@@ -25,35 +26,39 @@
     X(ETRUNCPATH, "truncated path")                                            \
     X(EUNLINK, "unlink failed")
 
-enum xfile_rc
+enum fs_rc
 {
-#define X(A, _) XFILE_##A,
-    XFILE_MAP(X)
+#define X(A, _) FS_##A,
+    FS_MAP(X)
 #undef X
 };
 
-int xfile_size(char const *filepath, int64_t *size);
-int xfile_psize(FILE *fp, int64_t *size);
-int xfile_dsize(int fd, int64_t *size);
+int fs_size(char const *filepath, long *size);
+int fs_size_fp(FILE *fp, long *size);
+int fs_size_fd(int fd, long *size);
 
-int xfile_tell(FILE *restrict fp, int64_t *offset);
-int xfile_seek(FILE *restrict fp, int64_t offset, int whence);
+int fs_tell(FILE *restrict fp, long *offset);
+int fs_seek(FILE *restrict fp, long offset, int whence);
 
-int xfile_copy(FILE *restrict dst, FILE *restrict src);
-int xfile_unlink(char const *filepath);
-int xfile_rmdir(char const *dirpath);
-int xfile_mkstemp(unsigned size, char *filepath);
-int xfile_move(char const *restrict dst, char const *restrict src);
+int fs_copy(FILE *restrict dst, FILE *restrict src);
+int fs_unlink(char const *filepath);
+int fs_rmdir(char const *dirpath);
+int fs_mkstemp(unsigned size, char *filepath);
+int fs_move(char const *restrict dst, char const *restrict src);
 
-int xfile_refopen(FILE *fp, char const *mode, FILE **out);
-int xfile_fileno(FILE *fp, int *fd);
-int xfile_getpath(FILE *fp, unsigned size, char *filepath);
+int fs_refopen(FILE *fp, char const *mode, FILE **out);
+int fs_fileno(FILE *fp, int *fd);
+int fs_getpath(FILE *fp, unsigned size, char *filepath);
 
-bool xfile_exists(char const *filepath);
-int xfile_touch(char const *filepath);
+bool fs_exists(char const *filepath);
+int fs_touch(char const *filepath);
 
-int xfile_readall(char const *filepath, int64_t *size, unsigned char **data);
+int fs_readall(char const *filepath, long *size, unsigned char **data);
+int fs_writeall(char const *filepath, long size, unsigned char *data);
 
-char const *xfile_strerror(int rc);
+char const *fs_strerror(int rc);
+
+int fs_join(FILE *a, FILE *b, FILE *out);
+int fs_split(FILE *in, long cut, FILE *a, FILE *b);
 
 #endif
