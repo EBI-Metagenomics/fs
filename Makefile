@@ -2,8 +2,8 @@
 
 FS_VERSION := 2.0.0
 
-CC := clang
-CFLAGS := $(CFLAGS) -std=c11 -Wall -Wextra
+CC ?= gcc
+CFLAGS := $(CFLAGS) -Wall -Wextra
 
 SRC := fs.c
 OBJ := $(SRC:.c=.o)

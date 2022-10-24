@@ -169,14 +169,21 @@ int fs_copy(char const *dst, char const *src)
 #else
     // sendfile will work with non-socket output (i.e. regular file) on
     // Linux 2.6.33+
-    off_t bytesCopied = 0;
-    struct stat fileinfo = {0};
-    fstat(input, &fileinfo);
-    if (sendfile(output, input, &bytesCopied, fileinfo.st_size))
+    long size = 0;
+    int rc = fs_size_fd(input, &size);
+    if (rc)
     {
         close(input);
         close(output);
-        return FS_SENDFILE;
+        return rc;
+    }
+    off_t offset = 0;
+    ssize_t cnt = (ssize_t)size;
+    if (sendfile(output, input, &offset, cnt) != cnt)
+    {
+        close(input);
+        close(output);
+        return FS_ESENDFILE;
     }
 #endif
 
