@@ -471,11 +471,10 @@ int fs_writelines(char const *filepath, long cnt, char *lines[])
 
 int fs_ljoin(FILE *left, FILE *right)
 {
-    rewind(left);
-
     FILE *tmp = tmpfile();
     if (!tmp) return FS_ETMPFILE;
 
+    rewind(left);
     int rc = fs_copy_fp(tmp, left);
     if (rc) goto cleanup;
 
@@ -489,7 +488,24 @@ cleanup:
     return rc;
 }
 
-int fs_rjoin(FILE *left, FILE *right) { return fs_ljoin(right, left); }
+int fs_rjoin(FILE *left, FILE *right)
+{
+    FILE *tmp = tmpfile();
+    if (!tmp) return FS_ETMPFILE;
+
+    rewind(right);
+    int rc = fs_copy_fp(tmp, right);
+    if (rc) goto cleanup;
+
+    rewind(tmp);
+    rewind(left);
+    rewind(right);
+    rc = fs_join(left, tmp, right);
+
+cleanup:
+    fclose(tmp);
+    return rc;
+}
 
 static int compare(const void *a, const void *b)
 {

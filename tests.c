@@ -115,4 +115,14 @@ static void test_join(void)
     fclose(out);
     ASSERT(!fs_cksum("output.txt", FS_FLETCHER16, &chk));
     ASSERT(chk == 13112);
+
+    fs_unlink("output.txt");
+    ASSERT(!fs_copy("output.txt", "assets/d.txt"));
+    a = fopen("assets/unsorted.txt", "rb");
+    b = fopen("output.txt", "rb+");
+    ASSERT(!fs_rjoin(a, b));
+    fclose(a);
+    fclose(b);
+    ASSERT(!fs_cksum("output.txt", FS_FLETCHER16, &chk));
+    ASSERT(chk == 26780);
 }
