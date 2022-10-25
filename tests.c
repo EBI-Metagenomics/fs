@@ -21,6 +21,7 @@ inline static void print_ctx(char const *func, char const *file, int line)
     } while (0)
 
 static void test_cksum(void);
+static void test_join(void);
 
 int main(void)
 {
@@ -69,6 +70,7 @@ int main(void)
     ASSERT(fs_mkstemp(sizeof small, small) == FS_ETRUNCPATH);
 
     test_cksum();
+    test_join();
 
     return 0;
 }
@@ -90,4 +92,27 @@ static void test_cksum(void)
         ASSERT(!fs_cksum("output.txt", FS_FLETCHER16, &chk));
         ASSERT(chsums[i] == chk);
     }
+}
+
+static void test_join(void)
+{
+    if (fs_exists("output.txt")) fs_unlink("output.txt");
+    FILE *a = fopen("assets/f.txt", "rb");
+    FILE *b = fopen("assets/unsorted.txt", "rb");
+    FILE *out = fopen("output.txt", "wb");
+    ASSERT(!fs_join(a, b, out));
+    fclose(out);
+    fclose(b);
+    fclose(a);
+    long chk = 0;
+    ASSERT(!fs_cksum("output.txt", FS_FLETCHER16, &chk));
+    ASSERT(chk == 65238);
+
+    out = fopen("output.txt", "rb+");
+    b = fopen("assets/unsorted.txt", "rb");
+    ASSERT(!fs_ljoin(out, b));
+    fclose(b);
+    fclose(out);
+    ASSERT(!fs_cksum("output.txt", FS_FLETCHER16, &chk));
+    ASSERT(chk == 13112);
 }
