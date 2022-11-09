@@ -1,13 +1,10 @@
-#ifdef _POSIX_C_SOURCE
-#undef _POSIX_C_SOURCE
-#endif
-
-#ifdef _FILE_OFFSET_BITS
-#undef _FILE_OFFSET_BITS
-#endif
-
+#if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200809L
 #define _POSIX_C_SOURCE 200809L
+#endif
+
+#if !defined(_FILE_OFFSET_BITS) || _FILE_OFFSET_BITS < 64
 #define _FILE_OFFSET_BITS 64
+#endif
 
 #include "fs.h"
 #include <assert.h>

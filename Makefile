@@ -1,9 +1,9 @@
 .POSIX:
 
-FS_VERSION := 2.0.0
+FS_VERSION := 2.0.1
 
 CC ?= gcc
-CFLAGS := $(CFLAGS) -Wall -Wextra
+CFLAGS := $(CFLAGS) -std=c99 -Wall -Wextra
 
 SRC := fs.c
 OBJ := $(SRC:.c=.o)
