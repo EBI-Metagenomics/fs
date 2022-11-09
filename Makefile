@@ -1,6 +1,6 @@
 .POSIX:
 
-FS_VERSION := 2.0.1
+FS_VERSION := 2.0.0
 
 CC ?= gcc
 CFLAGS := $(CFLAGS) -std=c99 -Wall -Wextra
